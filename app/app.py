@@ -1,14 +1,15 @@
 import dash
 from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
+import plotly.express as px
 
-# Initialize the app with a clean medical-style theme
+# Initialize the app with a professional medical theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
-server = app.server  # Crucial for Render deployment
+server = app.server  # Required for Render deployment
 
 # --- UI COMPONENTS ---
 
-# 1. Header
+# 1. Header Section
 header = dbc.Row([
     dbc.Col(html.H1("BC Analytics | Precision Risk Engine",
             className="text-center text-primary fw-bold mb-4"), width=12)
@@ -35,7 +36,7 @@ assessment_form = dbc.Card([
                           placeholder="e.g., 120", className="mb-3"),
             ], width=6),
 
-            # Column: Lifestyle Factors [cite: 15]
+            # Column: Lifestyle Factors
             dbc.Col([
                 html.Label("Smoking History", className="fw-bold"),
                 dcc.Dropdown(
@@ -62,18 +63,37 @@ assessment_form = dbc.Card([
     ])
 ], className="shadow")
 
-# --- LAYOUT ---
+# 3. Segmentation & SHAP Content (Phase 3)
+segmentation_tab_content = html.Div([
+    dbc.Row([
+        dbc.Col([
+            html.H4("Lifestyle Cluster Analysis (k=3)",
+                    className="mt-4 fw-bold"),
+            html.P("Visualizing patient position within lifestyle-based segments.",
+                   className="text-muted"),
+            # Placeholder for K-Means plot [cite: 33]
+            dcc.Graph(id='cluster-graph'),
+        ], width=12),
+        dbc.Col([
+            html.H4("Key Risk Drivers (SHAP Analysis)",
+                    className="mt-4 fw-bold"),
+            html.P("Factors contributing most significantly to the predicted risk.",
+                   className="text-muted"),
+            # Placeholder for SHAP analysis [cite: 36]
+            dcc.Graph(id='shap-graph'),
+        ], width=12)
+    ])
+])
+
+# --- MAIN LAYOUT ---
 
 app.layout = dbc.Container([
     header,
     dbc.Tabs([
         dbc.Tab(assessment_form, label="1. Patient Assessment",
                 tab_id="tab-risk", className="mt-4"),
-        dbc.Tab(html.Div([
-            html.H3("Lifestyle Segmentation (k=3)", className="mt-4"),
-            html.P("Waiting for cluster data from the Unsupervised Learning Specialist...",
-                   className="text-muted")
-        ]), label="2. Population Segments", tab_id="tab-segments"),
+        dbc.Tab(segmentation_tab_content,
+                label="2. Population Segments", tab_id="tab-segments"),
     ], id="tabs", active_tab="tab-risk"),
 
     # Results Output Area
@@ -84,30 +104,46 @@ app.layout = dbc.Container([
 
 
 @app.callback(
-    Output("prediction-output", "children"),
+    [Output("prediction-output", "children"),
+     Output("cluster-graph", "figure"),
+     Output("shap-graph", "figure")],
     Input("predict-btn", "n_clicks"),
     [State("input-age", "value"), State("input-bmi", "value")],
     prevent_initial_call=True
 )
-def run_prediction(n_clicks, age, bmi):
-    # Basic validation
+def run_full_analysis(n_clicks, age, bmi):
+    # 1. Validation check
     if age is None or bmi is None:
-        return dbc.Alert("Error: Please provide at least Age and BMI to generate a profile.", color="danger")
+        return dbc.Alert("Error: Please provide at least Age and BMI.", color="danger"), dash.no_update, dash.no_update
 
-    # Placeholder Logic: Replace this once Role 3 provides the .pkl model
+    # 2. Risk Prediction Mock Logic (To be updated with Role 3's model)
     is_high_risk = age > 50 or bmi > 30
     risk_text = "HIGH RISK" if is_high_risk else "STABLE / LOW RISK"
     risk_color = "danger" if is_high_risk else "success"
 
-    return dbc.Card([
+    prediction_card = dbc.Card([
         dbc.CardBody([
             html.H2(f"Assessment Result: {risk_text}",
                     className=f"text-center text-{risk_color} fw-bold"),
             html.Hr(),
-            html.P("Next Steps: Review SHAP drivers and patient lifestyle segment positioning below.",
+            html.P("Switch to the 'Population Segments' tab to see driver and cluster details.",
                    className="text-center text-muted mb-0")
         ])
     ], className=f"border-{risk_color} shadow-lg")
+
+    # 3. Graph Mock Logic (To be updated with Role 4's visuals)
+    # Cluster Mock
+    dummy_df = px.data.iris()
+    cluster_fig = px.scatter(dummy_df, x="sepal_width", y="sepal_length", color="species",
+                             title="Lifestyle Segments (k=3 Mockup)")
+
+    # SHAP Mock
+    shap_fig = px.bar(x=[5, 2, -1], y=["Age", "BMI", "Diet"], orientation='h',
+                      title="Patient-Specific Risk Drivers (SHAP Mockup)")
+    shap_fig.update_layout(
+        xaxis_title="Influence on Risk Score", yaxis_title="Feature")
+
+    return prediction_card, cluster_fig, shap_fig
 
 
 if __name__ == '__main__':
