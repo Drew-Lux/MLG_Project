@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Mac system files
+.DS_Store
+
+# Data & Models (ignore large files but keep the folders)
+data/*.csv
+models/*.pkl
+!data/.gitkeep
+!models/.gitkeep
