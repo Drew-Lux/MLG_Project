@@ -1,19 +1,22 @@
-# Byte-compiled / optimized / DLL files
+# Cache and Environment
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Environments
-.env
-.venv
-env/
+.venv/
 venv/
-
-# Mac system files
 .DS_Store
 
-# Data & Models (ignore large files but keep the folders)
-data/*.csv
-models/*.pkl
+# ASSETS
+# Ignore folders but allow the specific files needed for the app
+data/*
+outputs/*
+models/*
+
+!data/Diabetes_and_LifeStyle_Dataset_.csv
+!outputs/clustering/*.csv
+!outputs/clustering/*.pkl
+!outputs/models/*.pkl
+
+# Keep folder structure even if empty
 !data/.gitkeep
+!outputs/.gitkeep
 !models/.gitkeep
