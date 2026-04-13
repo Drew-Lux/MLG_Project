@@ -1,7 +1,135 @@
+import os
+import joblib
+import numpy as np
+import pandas as pd
+
 import dash
 from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
+import plotly.graph_objects as go
+
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+# ─── Data & model paths ───────────────────────────────────────────────────────
+BASE_DIR     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATASET_PATH = os.path.join(BASE_DIR, "data", "Diabetes_and_Lifestyle_Dataset_Dummy.csv")
+OUTPUT_DIR   = os.path.join(BASE_DIR, "outputs", "clustering")
+MODELS_DIR   = os.path.join(BASE_DIR, "outputs", "models")
+
+# ─── Load pipeline outputs ────────────────────────────────────────────────────
+def load_base_data():
+    df = pd.read_csv(DATASET_PATH)
+    assignments_path = os.path.join(OUTPUT_DIR, "patient_cluster_assignments.csv")
+    if os.path.exists(assignments_path):
+        assignments = pd.read_csv(assignments_path)
+        df["cluster"]      = assignments["cluster"].values
+        df["cluster_name"] = assignments["cluster_name"].values
+    else:
+        df["cluster"]      = 0
+        df["cluster_name"] = "Unknown"
+    return df
+ 
+def load_shap_importance():
+    path = os.path.join(OUTPUT_DIR, "shap_cluster_importance.csv")
+    if os.path.exists(path):
+        return pd.read_csv(path)
+    path2 = os.path.join(OUTPUT_DIR, "shap_classification_importance.csv")
+    if os.path.exists(path2):
+        return pd.read_csv(path2)
+    return None
+ 
+def load_recommendations():
+    path = os.path.join(OUTPUT_DIR, "actionable_recommendations.csv")
+    if os.path.exists(path):
+        return pd.read_csv(path)
+    return pd.DataFrame()
+ 
+def load_kmeans_pipeline():
+    path = os.path.join(OUTPUT_DIR, "kmeans_pipeline.pkl")
+    if os.path.exists(path):
+        return joblib.load(path)
+    return None
+ 
+def load_classification_model():
+    path = os.path.join(MODELS_DIR, "xgboost_model.pkl")
+    if os.path.exists(path):
+        return joblib.load(path)
+    return None
+ 
+df        = load_base_data()
+shap_df   = load_shap_importance()
+rec_df    = load_recommendations()
+km_bundle = load_kmeans_pipeline()
+clf_model = load_classification_model()
+ 
+# Encode for PCA
+df_enc = df.copy()
+for col in df_enc.select_dtypes(include=["object", "str"]).columns:
+    df_enc[col] = LabelEncoder().fit_transform(df_enc[col].astype(str))
+ 
+feature_cols = [c for c in df_enc.columns
+                if c not in ["cluster", "cluster_name", "diabetes_stage",
+                              "diabetes_stage_enc"]]
+ 
+CLUSTER_COLORS = {
+    "Low Risk Lifestyle":      "#2A9D8F",
+    "Moderate Risk Lifestyle": "#F4A261",
+    "High Risk Lifestyle":     "#E63946",
+}
+ 
+# ─── Build real figures ───────────────────────────────────────────────────────
+def build_cluster_figure():
+    # Use the exact feature order the scaler was fitted with
+    if km_bundle:
+        scaler_features = km_bundle["scaler"].feature_names_in_
+        X_df    = pd.DataFrame(df_enc[feature_cols].values, columns=feature_cols)
+        X_df    = X_df[scaler_features]   # reorder to match scaler
+        X_scaled = km_bundle["scaler"].transform(X_df)
+    else:
+        X_df     = pd.DataFrame(df_enc[feature_cols].values, columns=feature_cols)
+        X_scaled = StandardScaler().fit_transform(X_df)
+
+    pca    = PCA(n_components=2, random_state=42)
+    coords = pca.fit_transform(X_scaled)
+    ev     = pca.explained_variance_ratio_
+    plot_df = pd.DataFrame({
+        "PC1":     coords[:, 0],
+        "PC2":     coords[:, 1],
+        "Segment": df["cluster_name"].values,
+    })
+    fig = px.scatter(
+        plot_df, x="PC1", y="PC2", color="Segment",
+        color_discrete_map=CLUSTER_COLORS,
+        opacity=0.65,
+        title="Lifestyle Segments (k=3)",
+        labels={"PC1": f"PC1 ({ev[0]*100:.1f}% var)",
+                "PC2": f"PC2 ({ev[1]*100:.1f}% var)"},
+    )
+    fig.update_traces(marker_size=6)
+    fig.update_layout(legend_title="Lifestyle Segment", template="plotly_white")
+    return fig
+ 
+def build_shap_figure():
+    if shap_df is None:
+        fig = go.Figure()
+        fig.add_annotation(text="Run pipeline to generate SHAP values.",
+                           showarrow=False, font_size=14)
+        return fig
+    top = shap_df.head(12)
+    fig = px.bar(
+        top[::-1], x="mean_|SHAP|", y="feature", orientation="h",
+        title="Patient-Specific Risk Drivers (SHAP)",
+        labels={"mean_|SHAP|": "Influence on Risk Score", "feature": "Feature"},
+        color="mean_|SHAP|",
+        color_continuous_scale="RdYlGn_r",
+    )
+    fig.update_layout(coloraxis_showscale=False, template="plotly_white")
+    return fig
+ 
+cluster_fig = build_cluster_figure()
+shap_fig    = build_shap_figure()
 
 # Initialize the app with a professional medical theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
@@ -72,7 +200,7 @@ segmentation_tab_content = html.Div([
             html.P("Visualizing patient position within lifestyle-based segments.",
                    className="text-muted"),
             # Placeholder for K-Means plot [cite: 33]
-            dcc.Graph(id='cluster-graph'),
+            dcc.Graph(id='cluster-graph', figure = cluster_fig),
         ], width=12),
         dbc.Col([
             html.H4("Key Risk Drivers (SHAP Analysis)",
@@ -80,7 +208,7 @@ segmentation_tab_content = html.Div([
             html.P("Factors contributing most significantly to the predicted risk.",
                    className="text-muted"),
             # Placeholder for SHAP analysis [cite: 36]
-            dcc.Graph(id='shap-graph'),
+            dcc.Graph(id='shap-graph', figure = shap_fig),
         ], width=12)
     ])
 ])
@@ -131,20 +259,58 @@ def run_full_analysis(n_clicks, age, bmi):
         ])
     ], className=f"border-{risk_color} shadow-lg")
 
-    # 3. Graph Mock Logic (To be updated with Role 4's visuals)
-    # Cluster Mock
-    dummy_df = px.data.iris()
-    cluster_fig = px.scatter(dummy_df, x="sepal_width", y="sepal_length", color="species",
-                             title="Lifestyle Segments (k=3 Mockup)")
+    # 3. Graph Mock Logic
+    if km_bundle:
+        scaler_features = km_bundle["scaler"].feature_names_in_
 
-    # SHAP Mock
-    shap_fig = px.bar(x=[5, 2, -1], y=["Age", "BMI", "Diet"], orientation='h',
-                      title="Patient-Specific Risk Drivers (SHAP Mockup)")
-    shap_fig.update_layout(
-        xaxis_title="Influence on Risk Score", yaxis_title="Feature")
+        input_vec = pd.DataFrame([{c: 0 for c in scaler_features}])
+        if "age" in scaler_features:
+            input_vec["age"] = age
+        if "bmi" in scaler_features:
+            input_vec["bmi"] = bmi
+        input_vec = input_vec[scaler_features]
 
-    return prediction_card, cluster_fig, shap_fig
+        X_in       = km_bundle["scaler"].transform(input_vec)
+        cluster_id = km_bundle["kmeans"].predict(X_in)[0]
+        id_to_name = (df[["cluster", "cluster_name"]]
+                      .drop_duplicates()
+                      .set_index("cluster")["cluster_name"]
+                      .to_dict())
+        segment = id_to_name.get(cluster_id, f"Cluster {cluster_id}")
+
+        # Rebuild PCA with patient star marker
+        X_all    = pd.DataFrame(df_enc[feature_cols].values, columns=feature_cols)
+        X_all    = X_all[scaler_features]
+        X_scaled = km_bundle["scaler"].transform(X_all)
+        pca      = PCA(n_components=2, random_state=42)
+        coords   = pca.fit_transform(X_scaled)
+        ev       = pca.explained_variance_ratio_
+
+        plot_df = pd.DataFrame({
+            "PC1":     coords[:, 0],
+            "PC2":     coords[:, 1],
+            "Segment": df["cluster_name"].values,
+        })
+        updated_cluster_fig = px.scatter(
+            plot_df, x="PC1", y="PC2", color="Segment",
+            color_discrete_map=CLUSTER_COLORS, opacity=0.65,
+            title=f"Lifestyle Segments (k=3) — Patient assigned: {segment}",
+            labels={"PC1": f"PC1 ({ev[0]*100:.1f}% var)",
+                    "PC2": f"PC2 ({ev[1]*100:.1f}% var)"},
+        )
+        patient_pca = pca.transform(km_bundle["scaler"].transform(input_vec))
+        updated_cluster_fig.add_trace(go.Scatter(
+            x=[patient_pca[0, 0]], y=[patient_pca[0, 1]],
+            mode="markers",
+            marker=dict(size=18, color="black", symbol="star"),
+            name="This Patient",
+        ))
+        updated_cluster_fig.update_layout(template="plotly_white")
+    else:
+        updated_cluster_fig = cluster_fig
+ 
+    return prediction_card, updated_cluster_fig, shap_fig
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)

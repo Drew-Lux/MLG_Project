@@ -4,3 +4,8 @@ pandas
 scikit-learn
 gunicorn
 plotly
+numpy
+matplotlib
+seaborn
+joblib
+xgboost

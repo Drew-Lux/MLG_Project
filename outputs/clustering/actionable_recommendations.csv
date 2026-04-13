@@ -1,0 +1,10 @@
+cluster_id,cluster_name,patient_count,key_drivers,recommendation
+0,Moderate Risk Lifestyle,93,"exercise_days, smoking, age, alcohol, bmi",⚠ Low physical activity (1.4 days/week). Target ≥150 min/week moderate aerobic exercise (ADA guidelines).
+0,Moderate Risk Lifestyle,93,"exercise_days, smoking, age, alcohol, bmi",✔ BMI is within acceptable range (25.1). Encourage maintenance through regular physical activity.
+1,Low Risk Lifestyle,66,"exercise_days, smoking, age, alcohol, bmi",✔ Physical activity is adequate (4.7 days/week). Encourage consistency.
+1,Low Risk Lifestyle,66,"exercise_days, smoking, age, alcohol, bmi",⚠ Notable alcohol usage (0.47). Provide cessation support and counselling resources.
+1,Low Risk Lifestyle,66,"exercise_days, smoking, age, alcohol, bmi",⚠ BMI is elevated (27.1). Recommend structured weight-management plan and dietitian referral.
+2,High Risk Lifestyle,41,"smoking, age, blood_glucose, exercise_days, bmi",⚠ Notable smoking prevalence (1.00). Provide cessation support and counselling resources.
+2,High Risk Lifestyle,41,"smoking, age, blood_glucose, exercise_days, bmi",⚠ Blood glucose is borderline (107.2 mg/dL). Recommend reducing refined sugar intake and 30-min daily walks.
+2,High Risk Lifestyle,41,"smoking, age, blood_glucose, exercise_days, bmi",⚠ Low physical activity (2.3 days/week). Target ≥150 min/week moderate aerobic exercise (ADA guidelines).
+2,High Risk Lifestyle,41,"smoking, age, blood_glucose, exercise_days, bmi",✔ BMI is within acceptable range (25.6). Encourage maintenance through regular physical activity.
