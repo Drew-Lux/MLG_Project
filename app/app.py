@@ -10,149 +10,225 @@ import plotly.graph_objects as go
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder
 
-# --- PATHS ---
+# ─── DYNAMIC PATH LOGIC ──────────────────────────────────────────────────────
+# This ensures app.py finds the data/outputs folders even when inside the 'app' subfolder
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET_PATH = os.path.join(
     BASE_DIR, "data", "Diabetes_and_LifeStyle_Dataset_.csv")
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "clustering")
 
-# --- DATA LOAD ---
+# ─── BRANDING & COLORS ───────────────────────────────────────────────────────
+COLORS = {
+    "primary": "#2A9D8F",   # Medical Mint
+    "secondary": "#264653",  # Deep Slate
+    "danger": "#E63946",    # Alert Red
+    "warning": "#F4A261",   # Amber
+    "bg": "#F8F9FA"         # Light Grey
+}
+
+# ─── DATA & ASSET LOADING ────────────────────────────────────────────────────
 
 
 def load_assets():
     try:
         df = pd.read_csv(DATASET_PATH)
-        path = os.path.join(OUTPUT_DIR, "kmeans_pipeline.pkl")
-        km = joblib.load(path) if os.path.exists(path) else None
-        return df, km
-    except:
-        return pd.DataFrame(), None
+        km_path = os.path.join(OUTPUT_DIR, "kmeans_pipeline.pkl")
+        shap_path = os.path.join(OUTPUT_DIR, "shap_cluster_importance.csv")
+
+        km = joblib.load(km_path) if os.path.exists(km_path) else None
+        shap = pd.read_csv(shap_path) if os.path.exists(shap_path) else None
+        return df, km, shap
+    except Exception as e:
+        print(f"Pathing Error: {e}")
+        return pd.DataFrame(), None, None
 
 
-df, km_bundle = load_assets()
+df, km_bundle, shap_df = load_assets()
 
-# --- STYLING ---
-COLORS = {"primary": "#2A9D8F", "secondary": "#264653",
-          "danger": "#E63946", "warning": "#F4A261"}
-
-# --- UI HELPERS ---
+# ─── UI HELPERS ──────────────────────────────────────────────────────────────
 
 
-def make_metric_card(title, value, color):
+def info_card(title, value, subtitle, color):
     return dbc.Card([
         dbc.CardBody([
-            html.H6(title, className="text-muted"),
-            html.H3(value, style={"color": color}, className="fw-bold")
+            html.H6(title, className="text-muted text-uppercase small"),
+            html.H2(value, style={"color": color}, className="fw-bold mb-0"),
+            html.P(subtitle, className="text-muted small mb-0")
         ])
-    ], className="shadow-sm border-0")
+    ], className="shadow-sm border-0 mb-3")
 
 
-# --- APP START ---
+# ─── APP START ───────────────────────────────────────────────────────────────
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
 
 app.layout = dbc.Container([
-    # Professional Header
+    # Professional Medical Header
     dbc.Row([
-        dbc.Col([
-            html.Div([
-                html.H1("BC ANALYTICS", style={
-                        "letter-spacing": "3px"}, className="fw-bold text-white mb-0"),
-                html.P("Precision Diabetes Risk Management System",
-                       className="text-white-50")
-            ], className="bg-primary p-4 rounded-bottom shadow mb-4")
-        ], width=12)
+        dbc.Col(html.Div([
+            html.H1("BC ANALYTICS | PRECISION RISK ENGINE",
+                    className="fw-bold text-white mb-0", style={"letter-spacing": "1.5px"}),
+            html.P("AI-Driven Clinical Risk Stratification & Population Insights",
+                   className="text-white-50 mb-0")
+        ], className="bg-primary p-4 rounded-bottom shadow mb-4"), width=12)
     ]),
 
-    # Tab System
     dbc.Tabs([
-        # TAB 1: CLINICAL ENTRY
+        # TAB 1: Patient Assessment
         dbc.Tab(label="PATIENT ASSESSMENT", children=[
             dbc.Row([
                 dbc.Col([
-                    html.H4("Patient Input", className="mt-4 mb-3 fw-bold"),
+                    html.H5("Clinical Entry",
+                            className="mt-4 fw-bold text-secondary"),
                     dbc.Card([
                         dbc.CardBody([
-                            dbc.Row([
-                                dbc.Col([
-                                    html.Label("Age"), dbc.Input(
-                                        id="input-age", type="number", className="mb-3"),
-                                    html.Label("BMI"), dbc.Input(
-                                        id="input-bmi", type="number", className="mb-3"),
-                                    html.Label("Systolic BP"), dbc.Input(
-                                        id="input-bp", type="number", className="mb-3"),
-                                ]),
-                                dbc.Col([
-                                    html.Label(
-                                        "Activity (Mins/Week)"), dbc.Input(id="input-act", type="number", className="mb-3"),
-                                    html.Label(
-                                        "Diet (1-10)"), dcc.Slider(1, 10, 1, value=5, id="input-diet"),
-                                    dbc.Button("GENERATE DIAGNOSTIC", id="predict-btn",
-                                               color="primary", className="mt-4 w-100 fw-bold")
-                                ])
-                            ])
-                        ])
-                    ], className="shadow border-0")
-                ], width=5),
+                            html.Label("Age", className="fw-bold"),
+                            dbc.Input(id="input-age", type="number",
+                                      placeholder="Enter Age", className="mb-3"),
 
-                # Dynamic Results Side
+                            html.Label("BMI (Body Mass Index)",
+                                       className="fw-bold"),
+                            dbc.Input(id="input-bmi", type="number",
+                                      placeholder="e.g. 28.5", className="mb-3"),
+
+                            html.Label(
+                                "Physical Activity (Minutes/Week)", className="fw-bold"),
+                            dbc.Input(id="input-act", type="number",
+                                      placeholder="e.g. 150", className="mb-3"),
+
+                            html.Label("Diet Quality Score (1-10)",
+                                       className="fw-bold"),
+                            dcc.Slider(1, 10, 1, value=5, id="input-diet",
+                                       marks={1: 'Poor', 5: 'Avg', 10: 'Great'}),
+
+                            dbc.Button("GENERATE DIAGNOSTIC", id="predict-btn",
+                                       color="primary", className="mt-4 w-100 fw-bold shadow-sm")
+                        ])
+                    ], className="border-0 shadow-sm p-2")
+                ], width=4),
+
                 dbc.Col([
-                    html.H4("Risk Profile", className="mt-4 mb-3 fw-bold"),
-                    html.Div(id="prediction-output")
-                ], width=7)
+                    html.H5("Diagnostic Intelligence Profile",
+                            className="mt-4 fw-bold text-secondary"),
+                    html.Div(id="prediction-output", children=[
+                        dbc.Alert("Analysis Ready: Enter patient clinical data to generate profile.",
+                                  color="light", className="text-center border shadow-sm")
+                    ])
+                ], width=8)
             ])
         ]),
 
-        # TAB 2: POPULATION INSIGHTS
-        dbc.Tab(label="LIFESTYLE SEGMENTS", children=[
+        # TAB 2: Population Insights
+        dbc.Tab(label="LIFESTYLE CLUSTERING", children=[
             dbc.Row([
                 dbc.Col([
-                    html.H4("Population Clustering", className="mt-4 fw-bold"),
-                    html.P("Each dot represents a patient. Your current patient is highlighted with a star.",
+                    html.H5("Population Similarity Map",
+                            className="mt-4 fw-bold text-secondary"),
+                    html.P("Groups patients by lifestyle habits. The Star represents your current patient.",
                            className="text-muted small"),
-                    dcc.Graph(id='cluster-graph')
-                ], width=8),
+                    dcc.Graph(id='cluster-graph', style={"height": "500px"})
+                ], width=7),
                 dbc.Col([
-                    html.H4("Risk Drivers", className="mt-4 fw-bold"),
-                    html.P("What causes the most risk in this population?",
+                    html.H5("Primary Risk Drivers",
+                            className="mt-4 fw-bold text-secondary"),
+                    html.P("Top 10 features influencing global risk scores.",
                            className="text-muted small"),
-                    dcc.Graph(id='shap-graph')
-                ], width=4)
+                    dcc.Graph(id='shap-graph', style={"height": "500px"})
+                ], width=5)
             ])
         ])
-    ], className="mt-2"),
+    ]),
 
-], fluid=True)
+    # SYSTEM STATUS FOOTER
+    dbc.Row([
+        dbc.Col(html.Hr(), width=12),
+        dbc.Col(html.P(f"System Status: {'✅ Model Connected' if km_bundle else '❌ Model File Missing - Check Path'}",
+                       className=f"text-center small {'text-success' if km_bundle else 'text-danger'}"), width=12)
+    ])
+], fluid=True, style={"backgroundColor": COLORS["bg"], "minHeight": "100vh"})
+
+# ─── DASHBOARD CALLBACK ──────────────────────────────────────────────────────
 
 
 @app.callback(
-    Output("prediction-output", "children"),
+    [Output("prediction-output", "children"),
+     Output("cluster-graph", "figure"),
+     Output("shap-graph", "figure")],
     Input("predict-btn", "n_clicks"),
-    [State("input-age", "value"), State("input-bmi", "value")],
-    prevent_initial_call=True
+    [State("input-age", "value"), State("input-bmi",
+                                        "value"), State("input-act", "value")],
+    prevent_initial_call=False
 )
-def run_prediction(n_clicks, age, bmi):
-    if not age or not bmi:
-        return dbc.Alert("Please enter core data to begin.", color="warning")
+def update_dashboard(n_clicks, age, bmi, act):
+    # Default Visuals
+    fig_cluster = go.Figure().update_layout(
+        title="Awaiting Model Assets...", template="plotly_white")
+    fig_shap = go.Figure().update_layout(
+        title="Awaiting SHAP Data...", template="plotly_white")
 
-    risk_score = (age * 0.5) + (bmi * 1.2)  # Dummy math for now
-    risk_level = "High" if risk_score > 60 else "Stable"
-    color = COLORS["danger"] if risk_level == "High" else COLORS["primary"]
+    # 1. VISUALIZATION LOGIC
+    if not df.empty and km_bundle:
+        scaler_features = km_bundle["scaler"].feature_names_in_
+        df_enc = df.copy()
+        for col in df_enc.select_dtypes(include=['object']).columns:
+            df_enc[col] = LabelEncoder().fit_transform(df_enc[col].astype(str))
 
-    return html.Div([
+        # PCA Projection
+        X_scaled = km_bundle["scaler"].transform(
+            df_enc.reindex(columns=scaler_features, fill_value=0))
+        pca = PCA(n_components=2, random_state=42)
+        coords = pca.fit_transform(X_scaled)
+
+        fig_cluster = px.scatter(x=coords[:, 0], y=coords[:, 1],
+                                 color=df.get("diabetes_stage", "Population"),
+                                 labels={
+                                     'x': 'Lifestyle Metric (PC1)', 'y': 'Clinical Metric (PC2)'},
+                                 template="plotly_white", opacity=0.4, title="Population Lifestyle Map")
+
+        # Highlight User
+        if age and bmi:
+            patient_row = pd.DataFrame([{col: 0 for col in scaler_features}])
+            patient_row['Age'] = age
+            patient_row['bmi'] = bmi
+            p_scaled = km_bundle["scaler"].transform(
+                patient_row.reindex(columns=scaler_features, fill_value=0))
+            p_pca = pca.transform(p_scaled)
+            fig_cluster.add_trace(go.Scatter(x=[p_pca[0, 0]], y=[p_pca[0, 1]], mode="markers",
+                                             marker=dict(size=22, color="black", symbol="star", line=dict(
+                                                 width=2, color="white")),
+                                             name="Current Patient"))
+
+    if shap_df is not None:
+        fig_shap = px.bar(shap_df.head(10)[::-1], x="mean_|SHAP|", y="feature", orientation="h",
+                          title="Top Risk Drivers", color_discrete_sequence=[COLORS["primary"]])
+
+    # 2. PREDICTION LOGIC
+    if n_clicks is None:
+        return dash.no_update, fig_cluster, fig_shap
+
+    # Mock Decision Logic (Update with Role 3 XGBoost later)
+    risk_score = min(100, (age or 0) * 0.4 + (bmi or 0) * 1.6)
+    level = "ELEVATED" if risk_score > 65 else "MODERATE" if risk_score > 40 else "STABLE"
+    res_color = COLORS["danger"] if level == "ELEVATED" else COLORS["warning"] if level == "MODERATE" else COLORS["primary"]
+
+    result_content = html.Div([
         dbc.Row([
-            dbc.Col(make_metric_card("Risk Level", risk_level, color)),
-            dbc.Col(make_metric_card("Risk Score",
-                    f"{int(risk_score)}%", color)),
-            dbc.Col(make_metric_card(
-                "Segment", "High Risk Lifestyle", COLORS["warning"])),
-        ], className="mb-4"),
+            dbc.Col(info_card("Risk Level", level,
+                    "Clinical Classification", res_color)),
+            dbc.Col(info_card("Model Confidence",
+                    f"{int(risk_score)}%", "Risk Probability", "#264653")),
+            dbc.Col(info_card("Lifestyle Segment", "Segment B",
+                    "Patient Grouping", COLORS["secondary"])),
+        ]),
         dbc.Alert([
-            html.H5("Clinical Note:", className="alert-heading"),
+            html.H5("Intervention Recommended",
+                    className="alert-heading fw-bold"),
             html.P(
-                f"This patient exhibits a {risk_level.lower()} risk profile. We recommend focusing on BMI reduction and lifestyle intervention.")
-        ], color="light", className="border-start border-4 shadow-sm")
+                f"Patient falls within the {level.lower()} risk bracket. Recommended actions include metabolic testing and lifestyle counseling.")
+        ], color="light", className="border-start border-primary border-4 shadow-sm mt-3")
     ])
+
+    return result_content, fig_cluster, fig_shap
 
 
 if __name__ == '__main__':
