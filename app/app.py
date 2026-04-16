@@ -1,3 +1,4 @@
+#app.py
 import os
 import joblib
 import numpy as np
@@ -16,6 +17,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET_PATH = os.path.join(BASE_DIR, "data_insight", "Diabetes_scaled_for_modeling.csv")
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "clustering")
 
+# ─── CLASSIFICATION MODEL LOADING ────────────────────────────────────────────
+CLASS_MODEL_PATH = os.path.join(BASE_DIR, "outputs", "models", "xgboost_model.pkl")
+
+clf_bundle = joblib.load(CLASS_MODEL_PATH) if os.path.exists(CLASS_MODEL_PATH) else None
+clf_model = clf_bundle["model"] if clf_bundle else None
+clf_scaler = clf_bundle["scaler"] if clf_bundle else None
+clf_label_encoder = clf_bundle["label_encoder"] if clf_bundle else None
+clf_features = clf_bundle["feature_names"] if clf_bundle else None
+
 # ─── BRANDING & COLORS ───────────────────────────────────────────────────────
 COLORS = {
     "primary": "#2A9D8F",   # Medical Mint
@@ -33,7 +43,7 @@ def load_assets():
         df = pd.read_csv(DATASET_PATH)
         km_path = os.path.join(OUTPUT_DIR, "kmeans_pipeline.pkl")
         shap_path = os.path.join(OUTPUT_DIR, "shap_cluster_importance.csv")
-        recs_path = os.path.join(OUTPUT_DIR, "actionable_recommendations.csv")       
+        recs_path = os.path.join(OUTPUT_DIR, "actionable_recommendations.csv")
 
         km = joblib.load(km_path) if os.path.exists(km_path) else None
         shap = pd.read_csv(shap_path) if os.path.exists(shap_path) else None
@@ -335,10 +345,42 @@ def update_dashboard(n_clicks, age, bmi, act, diet, sbp, dbp, glucose, hba1c, ch
     if n_clicks is None:
         return dash.no_update, fig_cluster, fig_shap
 
-    risk_score = min(100,(age or 0) * 0.4 + (bmi or 0) * 1.6 + (sbp or 0) * 0.05 + (dbp or 0) * 0.05 +
-                     (glucose or 0) * 0.1 + (hba1c or 0) * 5 + (chol or 0) * 0.02 +
-                     (trig or 0) * 0.02 - (sleep or 0) * 0.5 - (act or 0) * 0.05)
-    level = "ELEVATED" if risk_score > 65 else "MODERATE" if risk_score > 40 else "STABLE"
+    if clf_model and clf_scaler and clf_features:
+        # Build patient row with all required features
+        patient_row = pd.DataFrame([{col: 0 for col in clf_features}])
+        patient_row['Age'] = age or 30
+        patient_row['bmi'] = bmi or 28.5
+        patient_row['physical_activity_minutes_per_week'] = act or 150
+        patient_row['diet_score'] = diet or 5
+        patient_row['systolic_bp'] = sbp or 120
+        patient_row['diastolic_bp'] = dbp or 80
+        patient_row['fasting_glucose'] = glucose or 95
+        patient_row['hba1c'] = hba1c or 5.6
+        patient_row['cholesterol_total'] = chol or 180
+        patient_row['triglycerides'] = trig or 140
+        patient_row['heart_rate'] = hr or 72
+        patient_row['sleep_hours_per_day'] = sleep or 7
+        patient_row['stress_score'] = stress or 5
+        patient_row['smoking_status'] = smoking or 0
+        patient_row['alcohol_use'] = alcohol or 0
+
+        # Scale features safely
+        p_scaled = clf_scaler.transform(patient_row.reindex(columns=clf_features, fill_value=0))
+
+        # Predict risk class
+        pred_class = clf_model.predict(p_scaled)[0]
+
+        # Map to meaningful labels
+        stage_map = {"0": "Stable", "1": "Moderate Risk", "2": "Elevated Risk"}
+        level = stage_map.get(str(pred_class), "Unknown")
+
+        # Confidence (probability)
+        prob = clf_model.predict_proba(p_scaled).max()
+        risk_score = int(prob * 100)
+    else:
+        level = "UNKNOWN"
+        risk_score = 0
+        
     res_color = COLORS["danger"] if level == "ELEVATED" else COLORS["warning"] if level == "MODERATE" else COLORS["primary"]
 
     result_content = html.Div([
