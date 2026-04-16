@@ -20,7 +20,6 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "clustering")
 # ─── CLASSIFICATION MODEL LOADING ────────────────────────────────────────────
 CLASS_MODEL_PATH = os.path.join(
     BASE_DIR, "outputs", "models", "xgboost_model.pkl")
-
 clf_bundle = joblib.load(CLASS_MODEL_PATH) if os.path.exists(
     CLASS_MODEL_PATH) else None
 clf_model = clf_bundle["model"] if clf_bundle else None
@@ -39,7 +38,7 @@ ASSIGN_PATH = os.path.join(OUTPUT_DIR, "patient_cluster_assignments.csv")
 assignments_df = pd.read_csv(
     ASSIGN_PATH) if os.path.exists(ASSIGN_PATH) else None
 
-# ─── DATA LOAD FOR VISUALS ───────────────────────────────────────────────────
+# ─── DATA LOAD ───────────────────────────────────────────────────────────────
 
 
 def load_base_data():
@@ -52,17 +51,10 @@ def load_base_data():
 
 
 df = load_base_data()
+COLORS = {"primary": "#2A9D8F", "secondary": "#264653",
+          "danger": "#E63946", "warning": "#F4A261", "bg": "#F8F9FA"}
 
-# ─── BRANDING & COLORS ───────────────────────────────────────────────────────
-COLORS = {
-    "primary": "#2A9D8F",   # Medical Mint
-    "secondary": "#264653",  # Deep Slate
-    "danger": "#E63946",    # Alert Red
-    "warning": "#F4A261",   # Amber
-    "bg": "#F8F9FA"         # Light Grey
-}
-
-# ─── UI COMPONENTS ───────────────────────────────────────────────────────────
+# ─── UI HELPERS ──────────────────────────────────────────────────────────────
 
 
 def info_card(title, value, subtitle, color):
@@ -74,40 +66,22 @@ def info_card(title, value, subtitle, color):
         ])
     ], className="shadow-sm border-0 mb-3")
 
-# ─── INITIAL FIGURES ─────────────────────────────────────────────────────────
-
-
-def build_cluster_figure():
-    if not df.empty and km_bundle:
-        scaler_features = km_bundle["scaler"].feature_names_in_
-        X_scaled = km_bundle["scaler"].transform(
-            df.reindex(columns=scaler_features, fill_value=0))
-        pca = PCA(n_components=2, random_state=42)
-        coords = pca.fit_transform(X_scaled)
-        fig = px.scatter(x=coords[:, 0], y=coords[:, 1],
-                         color=df.get("cluster_name", None),
-                         template="plotly_white", opacity=0.4, title="Population Lifestyle Map")
-        return fig
-    return go.Figure().update_layout(title="Awaiting Data...")
-
 
 # ─── APP START ───────────────────────────────────────────────────────────────
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
 
 app.layout = dbc.Container([
-    # Header
     dbc.Row([
         dbc.Col(html.Div([
             html.H1("BC ANALYTICS | PRECISION RISK ENGINE",
-                    className="fw-bold text-white mb-0", style={"letter-spacing": "1.5px"}),
-            html.P("AI-Driven Clinical Risk Stratification & Population Insights",
+                    className="fw-bold text-white mb-0"),
+            html.P("Validated Clinical Intelligence Dashboard",
                    className="text-white-50 mb-0")
         ], className="bg-primary p-4 rounded-bottom shadow mb-4"), width=12)
     ]),
 
     dbc.Tabs([
-        # TAB 1: Patient Assessment
         dbc.Tab(label="PATIENT ASSESSMENT", children=[
             dbc.Row([
                 dbc.Col([
@@ -116,11 +90,11 @@ app.layout = dbc.Container([
                     dbc.Card([
                         dbc.CardBody([
                             dbc.Row([
-                                # Clinical Column
+                                # Column 1: Clinical
                                 dbc.Col([
                                     html.Label("Age", className="fw-bold"),
                                     dbc.Input(
-                                        id="input-age", type="number", placeholder="Years (e.g., 45)", className="mb-2"),
+                                        id="input-age", type="number", placeholder="e.g., 45", className="mb-2"),
                                     html.Label("BMI", className="fw-bold"),
                                     dbc.Input(
                                         id="input-bmi", type="number", placeholder="e.g., 28.5", className="mb-2"),
@@ -128,177 +102,159 @@ app.layout = dbc.Container([
                                                className="fw-bold"),
                                     dbc.Input(
                                         id="input-hba1c", type="number", placeholder="e.g., 5.7", className="mb-2"),
-                                    html.Label(
-                                        "Systolic Blood Pressure", className="fw-bold"),
+                                    html.Label("Systolic BP",
+                                               className="fw-bold"),
                                     dbc.Input(
                                         id="input-bp", type="number", placeholder="e.g., 120", className="mb-2"),
                                 ], width=6),
-                                # Lifestyle Column
+                                # Column 2: Lifestyle
                                 dbc.Col([
-                                    html.Label(
-                                        "Physical Activity (Mins/Week)", className="fw-bold"),
+                                    html.Label("Activity (Mins/Week)",
+                                               className="fw-bold"),
                                     dbc.Input(
                                         id="input-act", type="number", placeholder="e.g., 150", className="mb-2"),
-                                    html.Label(
-                                        "Diet Quality Score (1-10)", className="fw-bold"),
-                                    dcc.Slider(
-                                        1, 10, 1, value=5, id="input-diet", marks={1: '1', 5: '5', 10: '10'}),
-                                    html.Label(
-                                        "Smoking Status (0=Never, 1=Former, 2=Current)", className="fw-bold mt-3"),
-                                    dbc.Input(
-                                        id="input-smoke", type="number", placeholder="0, 1, or 2", className="mb-2"),
-                                    html.Label(
-                                        "Alcohol Consumption (0=None, 1=Mod, 2=Heavy)", className="fw-bold"),
-                                    dbc.Input(
-                                        id="input-alc", type="number", placeholder="0, 1, or 2", className="mb-2"),
+
+                                    html.Label("Diet Quality Score",
+                                               className="fw-bold"),
+                                    dcc.Slider(1, 10, 1, value=5, id="input-diet",
+                                               marks={i: str(i) for i in range(1, 11)}, tooltip={"placement": "bottom", "always_visible": True}),
+
+                                    html.Label("Smoking Status",
+                                               className="fw-bold mt-3"),
+                                    dcc.Dropdown(id="input-smoke", options=[
+                                        {'label': 'Never Smoked', 'value': 0},
+                                        {'label': 'Former Smoker', 'value': 1},
+                                        {'label': 'Current Smoker', 'value': 2}
+                                    ], placeholder="Select status...", className="mb-2"),
+
+                                    html.Label("Alcohol Consumption",
+                                               className="fw-bold"),
+                                    dcc.Dropdown(id="input-alc", options=[
+                                        {'label': 'None / Occasional', 'value': 0},
+                                        {'label': 'Moderate', 'value': 1},
+                                        {'label': 'Frequent / Heavy', 'value': 2}
+                                    ], placeholder="Select level...", className="mb-2"),
                                 ], width=6)
                             ]),
                             dbc.Button("GENERATE FULL DIAGNOSTIC", id="predict-btn",
-                                       color="primary", className="mt-4 w-100 fw-bold shadow-sm")
+                                       color="primary", className="mt-4 w-100 fw-bold")
                         ])
                     ], className="border-0 shadow-sm p-3")
                 ], width=5),
-
                 dbc.Col([
                     html.H5("Diagnostic Intelligence Profile",
                             className="mt-4 fw-bold text-secondary"),
-                    html.Div(id="prediction-output", children=[
-                        dbc.Alert("Analysis Ready: Please enter patient clinical data.",
-                                  color="light", className="text-center border shadow-sm")
-                    ])
+                    html.Div(id="prediction-output")
                 ], width=7)
             ])
         ]),
 
-        # TAB 2: Lifestyle & Population Segments
         dbc.Tab(label="LIFESTYLE CLUSTERING", children=[
             dbc.Row([
                 dbc.Col([
-                    html.H5("Population Lifestyle Map",
+                    html.H5("Lifestyle Similarity Mapping",
                             className="mt-4 fw-bold text-secondary"),
-                    dcc.Graph(
-                        id='cluster-graph', figure=build_cluster_figure(), style={"height": "550px"})
+                    html.P("This map groups patients by lifestyle habits. Red = Higher Clinical Risk, Green = Optimal Lifestyle.",
+                           className="text-muted small"),
+                    dcc.Graph(id='cluster-graph', style={"height": "550px"})
                 ], width=12)
             ])
         ])
-    ]),
-
-    # Status Footer
-    dbc.Row([
-        dbc.Col(html.Hr(), width=12),
-        dbc.Col(html.P(f"System Status: {'✅ Model Connected' if clf_model else '❌ Classification Model Missing'}",
-                       className=f"text-center small {'text-success' if clf_model else 'text-danger'}"), width=12)
     ])
 ], fluid=True, style={"backgroundColor": COLORS["bg"], "minHeight": "100vh"})
 
-# ─── DASHBOARD CALLBACK ──────────────────────────────────────────────────────
+# ─── CALLBACK ────────────────────────────────────────────────────────────────
 
 
 @app.callback(
     [Output("prediction-output", "children"),
      Output("cluster-graph", "figure")],
     Input("predict-btn", "n_clicks"),
-    [State("input-age", "value"), State("input-bmi", "value"),
-     State("input-hba1c", "value"), State("input-bp", "value"),
-     State("input-act", "value"), State("input-diet", "value"),
+    [State("input-age", "value"), State("input-bmi", "value"), State("input-hba1c", "value"),
+     State("input-bp", "value"), State("input-act",
+                                       "value"), State("input-diet", "value"),
      State("input-smoke", "value"), State("input-alc", "value")],
     prevent_initial_call=False
 )
 def update_dashboard(n_clicks, age, bmi, hba1c, bp, act, diet, smoke, alc):
-    # 1. VISUALIZATION LOGIC (The Scatter Plot)
-    fig_cluster = build_cluster_figure()
-
-    if age and bmi and km_bundle:
+    # 1. GRAPH LOGIC (Now with descriptive axes)
+    fig_cluster = go.Figure().update_layout(template="plotly_white")
+    if not df.empty and km_bundle:
         scaler_features = km_bundle["scaler"].feature_names_in_
-        p_row = pd.DataFrame([{f: 0 for f in scaler_features}])
-        p_row['Age'], p_row['bmi'] = age, bmi
-        # Feature Mapping for Scaler
-        if 'hba1c' in scaler_features:
-            p_row['hba1c'] = hba1c or 0
-        if 'systolic_bp' in scaler_features:
-            p_row['systolic_bp'] = bp or 0
-
-        pca = PCA(n_components=2, random_state=42)
         X_scaled = km_bundle["scaler"].transform(
             df.reindex(columns=scaler_features, fill_value=0))
-        pca.fit(X_scaled)  # Fit on population
+        pca = PCA(n_components=2, random_state=42)
+        coords = pca.fit_transform(X_scaled)
 
-        p_scaled = km_bundle["scaler"].transform(
-            p_row.reindex(columns=scaler_features, fill_value=0))
-        p_pca = pca.transform(p_scaled)
-        fig_cluster.add_trace(go.Scatter(x=[p_pca[0, 0]], y=[p_pca[0, 1]], mode="markers",
-                                         marker=dict(size=22, color="black", symbol="star", line=dict(
-                                             width=2, color="white")),
-                                         name="Current Patient"))
+        fig_cluster = px.scatter(x=coords[:, 0], y=coords[:, 1],
+                                 color=df.get("cluster_name", None),
+                                 labels={'x': 'Lifestyle Intensity Index',
+                                         'y': 'Clinical Variance Index'},
+                                 template="plotly_white", opacity=0.3, title="Population Similarity Map")
 
-    # 2. PREDICTION LOGIC
+        if age and bmi:
+            p_row = pd.DataFrame([{f: 0 for f in scaler_features}])
+            p_row['Age'], p_row['bmi'] = age, bmi
+            p_pca = pca.transform(km_bundle["scaler"].transform(
+                p_row.reindex(columns=scaler_features, fill_value=0)))
+            fig_cluster.add_trace(go.Scatter(x=[p_pca[0, 0]], y=[p_pca[0, 1]], mode="markers",
+                                             marker=dict(size=22, color="black", symbol="star", line=dict(
+                                                 width=2, color="white")),
+                                             name="Current Patient Position"))
+
     if n_clicks is None or not age or not bmi or not clf_model:
         return dash.no_update, fig_cluster
 
-    # A. PREPARE DATA FOR XGBOOST
+    # 2. PREDICTION LOGIC
     input_df = pd.DataFrame([{f: 0 for f in clf_features}])
-
-    # EXACT FEATURE MAPPING FOR MODEL
     mapping = {
         'Age': age, 'bmi': bmi, 'hba1c': hba1c, 'systolic_bp': bp,
         'physical_activity_minutes_per_week': act, 'diet_score': diet,
-        'smoking_history': smoke, 'alcohol_consumption': alc
+        'smoking_history': smoke if smoke is not None else 0,
+        'alcohol_consumption': alc if alc is not None else 0
     }
     for col, val in mapping.items():
         if col in clf_features:
             input_df[col] = val if val is not None else 0
 
-    # B. FIX: CONFIDENCE LOGIC
-    X_clf_scaled = clf_scaler.transform(input_df[clf_features])
-    probs = clf_model.predict_proba(X_clf_scaled)[0]
-    pred_idx = np.argmax(probs)
+    # Confidence Fix (Probability of predicted class)
+    X_clf = clf_scaler.transform(input_df[clf_features])
+    probs = clf_model.predict_proba(X_clf)[0]
+    p_idx = np.argmax(probs)
+    conf = probs[p_idx] * 100
+    label = clf_label_encoder.inverse_transform([p_idx])[0]
 
-    # Grab the confidence of the ACTUAL predicted class
-    confidence_val = probs[pred_idx] * 100
-    pred_label = clf_label_encoder.inverse_transform([pred_idx])[0]
-
-    # C. FIX: DYNAMIC SEGMENT (No more Segment B)
-    segment_name = "Analysis Pending"
+    # Dynamic Segment Fix (No hardcoded B)
+    segment = "Analysis Pending"
     if km_bundle:
-        km_features = km_bundle["scaler"].feature_names_in_
-        km_input = input_df.reindex(columns=km_features, fill_value=0)
-        km_scaled = km_bundle["scaler"].transform(km_input)
-        cid = km_bundle["kmeans"].predict(km_scaled)[0]
-
+        cid = km_bundle["kmeans"].predict(km_bundle["scaler"].transform(
+            input_df.reindex(columns=km_bundle["scaler"].feature_names_in_, fill_value=0)))[0]
         if assignments_df is not None:
-            name_map = assignments_df.set_index(
-                "cluster")["cluster_name"].to_dict()
-            segment_name = name_map.get(cid, f"Cluster {cid}")
+            segment = assignments_df.set_index(
+                "cluster")["cluster_name"].to_dict().get(cid, f"Cluster {cid}")
 
-    # D. FIX: FILTERED RECOMMENDATIONS
-    recommendations = []
-    if recs_df is not None:
-        # Filter advice specifically for the patient's dynamic cluster
-        filtered_recs = recs_df[recs_df["cluster_name"]
-                                == segment_name]["recommendation"].tolist()
-        recommendations = [html.Li(r) for r in filtered_recs]
+    # Recommendations Filtered by Segment
+    recs = [html.Li(r) for r in recs_df[recs_df["cluster_name"] == segment]
+            ["recommendation"].tolist()] if recs_df is not None else []
 
     res_color = COLORS["danger"] if "Diabetes" in str(
-        pred_label) else COLORS["primary"]
+        label) else COLORS["primary"]
 
-    result_content = html.Div([
+    return html.Div([
         dbc.Row([
-            dbc.Col(info_card("Risk Status", pred_label,
-                    "Model Prediction", res_color)),
-            dbc.Col(info_card(
-                "Confidence", f"{int(confidence_val)}%", "Probability for Class", "#264653")),
-            dbc.Col(info_card("Lifestyle Segment", segment_name,
-                    "Dynamic Clustering", COLORS["warning"])),
+            dbc.Col(info_card("Risk Assessment", label,
+                    "XGBoost Diagnosis", res_color)),
+            dbc.Col(info_card("Confidence",
+                    f"{int(conf)}%", "Model Probability", "#264653")),
+            dbc.Col(info_card("Lifestyle Group", segment,
+                    "Clinical Clustering", COLORS["warning"])),
         ]),
         dbc.Alert([
             html.H5(
-                f"Evidence-Based Advice for {segment_name}:", className="alert-heading fw-bold"),
-            html.Ul(
-                recommendations) if recommendations else "Continue standard health protocols."
+                f"Evidence-Based Strategy for {segment}:", className="alert-heading fw-bold"),
+            html.Ul(recs) if recs else "Maintain current clinical tracking."
         ], color="light", className="border-start border-primary border-4 shadow-sm mt-3")
-    ])
-
-    return result_content, fig_cluster
+    ]), fig_cluster
 
 
 if __name__ == '__main__':
