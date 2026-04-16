@@ -33,7 +33,7 @@ def load_assets():
         df = pd.read_csv(DATASET_PATH)
         km_path = os.path.join(OUTPUT_DIR, "kmeans_pipeline.pkl")
         shap_path = os.path.join(OUTPUT_DIR, "shap_cluster_importance.csv")
-        recs_path = os.path.join(OUTPUT_DIR, "actionable_recommendations.csv")
+        recs_path = os.path.join(OUTPUT_DIR, "actionable_recommendations.csv")       
 
         km = joblib.load(km_path) if os.path.exists(km_path) else None
         shap = pd.read_csv(shap_path) if os.path.exists(shap_path) else None
