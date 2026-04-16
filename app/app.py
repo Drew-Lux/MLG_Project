@@ -81,39 +81,61 @@ app.layout = dbc.Container([
                             className="mt-4 fw-bold text-secondary"),
                     dbc.Card([
                         dbc.CardBody([
-                            html.Label("Age", className="fw-bold"),
-                            dbc.Input(id="input-age", type="number",
-                                      placeholder="Enter Age", className="mb-3"),
+                            # Age
+                            dbc.Row([
+                                dbc.Col(html.Label("Age", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-age", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dbc.Input(id="input-age", type="number", placeholder="Enter Age", className="mb-3"),
+                            dbc.Tooltip("Age is a key risk factor for diabetes and cardiovascular disease.", target="info-age", placement="right"),
 
-                            html.Label("BMI (Body Mass Index)",
-                                       className="fw-bold"),
-                            dbc.Input(id="input-bmi", type="number",
-                                      placeholder="e.g. 28.5", className="mb-3"),
+                            # BMI
+                            dbc.Row([
+                                dbc.Col(html.Label("BMI (Body Mass Index)", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-bmi", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dbc.Input(id="input-bmi", type="number", placeholder="e.g. 28.5", className="mb-3"),
+                            dbc.Tooltip("BMI measures body fat based on height and weight. Normal range is 18.5–24.9.", target="info-bmi", placement="right"),
 
-                            html.Label(
-                                "Physical Activity (Minutes/Week)", className="fw-bold"),
-                            dbc.Input(id="input-act", type="number",
-                                      placeholder="e.g. 150", className="mb-3"),
+                            # Physical Activity
+                            dbc.Row([
+                                dbc.Col(html.Label("Physical Activity (Minutes/Week)", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-act", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dbc.Input(id="input-act", type="number", placeholder="e.g. 150", className="mb-3"),
+                            dbc.Tooltip("Weekly minutes of moderate exercise. ≥150 minutes is recommended.", target="info-act", placement="right"),
 
-                            html.Label("Diet Quality Score (1-10)",
-                                       className="fw-bold"),
-                            dcc.Slider(1, 10, 1, value=5, id="input-diet",
-                                       marks={1: 'Poor', 5: 'Avg', 10: 'Great'}),
+                            # Diet Quality
+                            dbc.Row([
+                                dbc.Col(html.Label("Diet Quality Score (1–10)", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-diet", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dcc.Slider(1, 10, 1, value=5, id="input-diet", marks={1: 'Poor', 5: 'Avg', 10: 'Great'}),
+                            dbc.Tooltip("Self‑rated diet quality. Higher scores indicate healthier eating habits.", target="info-diet", placement="right"),
 
-                            html.Label(
-                                "Systolic Blood Pressure (mmHg)", className="fw-bold"),
-                            dbc.Input(id="input-sbp", type="number",
-                                      placeholder="e.g. 120", className="mb-3"),
+                            # Systolic BP
+                            dbc.Row([
+                                dbc.Col(html.Label("Systolic Blood Pressure (mmHg)", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-sbp", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dbc.Input(id="input-sbp", type="number", placeholder="e.g. 120", className="mb-3"),
+                            dbc.Tooltip("Systolic BP is the pressure when the heart beats. Normal is ~120 mmHg.", target="info-sbp", placement="right"),
 
-                            html.Label(
-                                "Diastolic Blood Pressure (mmHg)", className="fw-bold"),
-                            dbc.Input(id="input-dbp", type="number",
-                                      placeholder="e.g. 80", className="mb-3"),
+                            # Diastolic BP
+                            dbc.Row([
+                                dbc.Col(html.Label("Diastolic Blood Pressure (mmHg)", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-dbp", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dbc.Input(id="input-dbp", type="number", placeholder="e.g. 80", className="mb-3"),
+                            dbc.Tooltip("Diastolic BP is the pressure when the heart rests between beats. Normal is ~80 mmHg.", target="info-dbp", placement="right"),
 
-                            html.Label(
-                                "Sleep Hours per Day", className="fw-bold"),
-                            dbc.Input(id="input-sleep", type="number",
-                                      placeholder="e.g. 7", className="mb-3"),
+                            # Sleep Hours
+                            dbc.Row([
+                                dbc.Col(html.Label("Sleep Hours per Day", className="fw-bold"), width="auto"),
+                                dbc.Col(html.Span("🛈", id="info-sleep", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                            ]),
+                            dbc.Input(id="input-sleep", type="number", placeholder="e.g. 7", className="mb-3"),
+                            dbc.Tooltip("Average nightly sleep duration. Adults typically need 7–9 hours.", target="info-sleep", placement="right"),
 
                             dbc.Button("GENERATE DIAGNOSTIC", id="predict-btn",
                             color="primary", className="mt-4 w-100 fw-bold shadow-sm")
