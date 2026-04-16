@@ -1,0 +1,9 @@
+feature,mean_|SHAP|
+diagnosed_diabetes,6.8939085
+hba1c,1.8881049
+diabetes_risk_score,0.13008568
+physical_activity_minutes_per_week,0.0030853697
+Age,0.0024123874
+bmi,0.002339826
+diet_score,0.0017362158
+systolic_bp,0.0007315785

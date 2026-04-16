@@ -1,3 +1,4 @@
+#Unsupervised_interpretability.py
 import os
 import warnings
 warnings.filterwarnings("ignore")
@@ -257,39 +258,52 @@ save_fig(fig, "cluster_pca.png")
 # ─────────────────────────────────────────────────────────────────────────────
  
 section("5. SHAP Values — Risk Classification")
- 
+
 model_path = os.path.join(MODELS_DIR, BEST_MODEL_KEY)
- 
+
 if not os.path.exists(model_path):
     print(f"  ⚠  Model file not found at: {model_path}")
     print("     Ensure Role 2 (classification) has saved the model first.")
     print("     Skipping SHAP classification section.")
     clf_model = None
 else:
-    clf_model = joblib.load(model_path)
-    print(f"  ✔  Loaded model from {model_path}")
- 
+    # Load the saved bundle (dict)
+    clf_bundle = joblib.load(model_path)
+    print(f"  ✔  Loaded model bundle from {model_path}")
+
+    # Extract the actual model and other components
+    clf_model = clf_bundle["model"]
+    scaler = clf_bundle["scaler"]
+    label_encoder = clf_bundle["label_encoder"]
+    feature_names = clf_bundle["feature_names"]
+    categorical_encoders = clf_bundle["categorical_encoders"]
+
     # ── SHAP TreeExplainer ────────────────────────────────────────────────────
     explainer_clf = shap.TreeExplainer(clf_model)
+
     # Use a sample for speed (max 1000 rows)
     sample_idx = np.random.RandomState(42).choice(len(X), size=min(1000, len(X)), replace=False)
     X_sample   = X.iloc[sample_idx]
-    shap_vals  = explainer_clf.shap_values(X_sample)
- 
+
+    # Scale the sample to match training pipeline
+    X_sample_scaled = scaler.transform(X_sample)
+
+    shap_vals  = explainer_clf.shap_values(X_sample_scaled)
+
     # Handle multi-class: use mean abs across classes
     if isinstance(shap_vals, list):
         shap_mean = np.mean([np.abs(s) for s in shap_vals], axis=0)
     else:
         shap_mean = np.abs(shap_vals)
- 
+
     mean_shap_df = pd.DataFrame({
-        "feature":    feature_cols,
+        "feature":    feature_names,
         "mean_|SHAP|": shap_mean.mean(axis=0)
     }).sort_values("mean_|SHAP|", ascending=False)
- 
+
     print(f"\n  Top 10 classification drivers:\n{mean_shap_df.head(10).to_string(index=False)}")
     mean_shap_df.to_csv(os.path.join(OUTPUT_DIR, "shap_classification_importance.csv"), index=False)
- 
+
     # ── Bar plot ──────────────────────────────────────────────────────────────
     top_n = min(15, len(mean_shap_df))
     fig, ax = plt.subplots(figsize=(9, 5))
@@ -301,33 +315,31 @@ else:
     ax.axvline(0, color="black", linewidth=0.8)
     plt.tight_layout()
     save_fig(fig, "shap_classification_bar.png")
- 
+
     # Beeswarm / Summary plot
-fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))
+    if isinstance(shap_vals, list):
+        best_class = int(np.argmax([np.abs(s).mean() for s in shap_vals]))
+        shap.summary_plot(
+            shap_vals[best_class],
+            X_sample_scaled,
+            feature_names=feature_names,
+            show=False,
+            plot_type="dot",
+            max_display=15
+        )
+        plt.title(f"SHAP Summary - Class: {label_encoder.classes_[best_class]}", fontweight="bold")
+    else:
+        shap.summary_plot(
+            shap_vals,
+            X_sample_scaled,
+            feature_names=feature_names,
+            show=False,
+            plot_type="dot",
+            max_display=15
+        )
+        plt.title("SHAP Summary - Risk Classification", fontweight="bold")
 
-if isinstance(shap_vals, list):
-    # For multi-class, pick the class with highest avg |shap|
-    best_class = int(np.argmax([np.abs(s).mean() for s in shap_vals]))
-    shap.summary_plot(
-        shap_vals[best_class],
-        X_sample,
-        feature_names=feature_cols,
-        show=False,
-        plot_type="dot",
-        max_display=15
-    )
-    plt.title(f"SHAP Summary - Class: {le_target.classes_[best_class]}", fontweight="bold")
-
-else:
-    shap.summary_plot(
-        shap_vals,
-        X_sample,
-        feature_names=feature_cols,
-        show=False,
-        plot_type="dot",
-        max_display=15
-    )
-    plt.title("SHAP Summary - Risk Classification", fontweight="bold")
     plt.tight_layout()
     save_fig(fig, "shap_classification_beeswarm.png")
 
