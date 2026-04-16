@@ -13,8 +13,7 @@ from sklearn.preprocessing import LabelEncoder
 # ─── DYNAMIC PATH LOGIC ──────────────────────────────────────────────────────
 # This ensures app.py finds the data/outputs folders even when inside the 'app' subfolder
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET_PATH = os.path.join(
-    BASE_DIR, "data", "Diabetes_and_LifeStyle_Dataset_.csv")
+DATASET_PATH = os.path.join(BASE_DIR, "data_insight", "Diabetes_scaled_for_modeling.csv")
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "clustering")
 
 # ─── BRANDING & COLORS ───────────────────────────────────────────────────────
@@ -34,16 +33,18 @@ def load_assets():
         df = pd.read_csv(DATASET_PATH)
         km_path = os.path.join(OUTPUT_DIR, "kmeans_pipeline.pkl")
         shap_path = os.path.join(OUTPUT_DIR, "shap_cluster_importance.csv")
+        recs_path = os.path.join(OUTPUT_DIR, "actionable_recommendations.csv")
 
         km = joblib.load(km_path) if os.path.exists(km_path) else None
         shap = pd.read_csv(shap_path) if os.path.exists(shap_path) else None
-        return df, km, shap
+        recs = pd.read_csv(recs_path) if os.path.exists(recs_path) else None
+        return df, km, shap, recs
     except Exception as e:
         print(f"Pathing Error: {e}")
-        return pd.DataFrame(), None, None
+        return pd.DataFrame(), None, None, None
 
 
-df, km_bundle, shap_df = load_assets()
+df, km_bundle, shap_df, recs_df = load_assets()
 
 # ─── UI HELPERS ──────────────────────────────────────────────────────────────
 
@@ -278,10 +279,8 @@ app.layout = dbc.Container([
 
 def update_dashboard(n_clicks, age, bmi, act, diet, sbp, dbp, glucose, hba1c, chol, trig, hr, sleep, stress, smoking, alcohol):
     # Default Visuals
-    fig_cluster = go.Figure().update_layout(
-        title="Awaiting Model Assets...", template="plotly_white")
-    fig_shap = go.Figure().update_layout(
-        title="Awaiting SHAP Data...", template="plotly_white")
+    fig_cluster = go.Figure().update_layout(title="Awaiting Model Assets...", template="plotly_white")
+    fig_shap = go.Figure().update_layout(title="Awaiting SHAP Data...", template="plotly_white")
 
     # 1. VISUALIZATION LOGIC
     if not df.empty and km_bundle:
@@ -291,23 +290,23 @@ def update_dashboard(n_clicks, age, bmi, act, diet, sbp, dbp, glucose, hba1c, ch
             df_enc[col] = LabelEncoder().fit_transform(df_enc[col].astype(str))
 
         # PCA Projection
-        X_scaled = km_bundle["scaler"].transform(
-            df_enc.reindex(columns=scaler_features, fill_value=0))
+        X_scaled = km_bundle["scaler"].transform(df_enc.reindex(columns=scaler_features, fill_value=0))
         pca = PCA(n_components=2, random_state=42)
         coords = pca.fit_transform(X_scaled)
 
-        fig_cluster = px.scatter(x=coords[:, 0], y=coords[:, 1],
-                                 color=df.get("diabetes_stage", "Population"),
-                                 labels={
-                                     'x': 'Lifestyle Metric (PC1)', 'y': 'Clinical Metric (PC2)'},
-                                 template="plotly_white", opacity=0.4, title="Population Lifestyle Map")
+        fig_cluster = px.scatter(
+            x=coords[:, 0], y=coords[:, 1],
+            color=df.get("diabetes_stage", "Population"),
+            labels={'x': 'Lifestyle Metric (PC1)', 'y': 'Clinical Metric (PC2)'},
+            template="plotly_white", opacity=0.4, title="Population Lifestyle Map"
+        )
 
         # Highlight User
         if age and bmi:
             patient_row = pd.DataFrame([{col: 0 for col in scaler_features}])
-            patient_row['Age'] = age
-            patient_row['bmi'] = bmi
-            patient_row['physical_activity_minutes_per_week'] = act or 0
+            patient_row['Age'] = age or 30
+            patient_row['bmi'] = bmi or 28.5
+            patient_row['physical_activity_minutes_per_week'] = act or 150
             patient_row['diet_score'] = diet or 5
             patient_row['systolic_bp'] = sbp or 120
             patient_row['diastolic_bp'] = dbp or 80
@@ -320,13 +319,13 @@ def update_dashboard(n_clicks, age, bmi, act, diet, sbp, dbp, glucose, hba1c, ch
             patient_row['stress_score'] = stress or 5
             patient_row['smoking_status'] = smoking or 0
             patient_row['alcohol_use'] = alcohol or 0
-            p_scaled = km_bundle["scaler"].transform(
-                patient_row.reindex(columns=scaler_features, fill_value=0))
+            p_scaled = km_bundle["scaler"].transform(patient_row.reindex(columns=scaler_features, fill_value=0))
             p_pca = pca.transform(p_scaled)
-            fig_cluster.add_trace(go.Scatter(x=[p_pca[0, 0]], y=[p_pca[0, 1]], mode="markers",
-                                             marker=dict(size=22, color="black", symbol="star", line=dict(
-                                                 width=2, color="white")),
-                                             name="Current Patient"))
+            fig_cluster.add_trace(go.Scatter(
+                x=[p_pca[0, 0]], y=[p_pca[0, 1]], mode="markers",
+                marker=dict(size=22, color="black", symbol="star", line=dict(width=2, color="white")),
+                name="Current Patient"
+            ))
 
     if shap_df is not None:
         fig_shap = px.bar(shap_df.head(10)[::-1], x="mean_|SHAP|", y="feature", orientation="h",
@@ -336,31 +335,37 @@ def update_dashboard(n_clicks, age, bmi, act, diet, sbp, dbp, glucose, hba1c, ch
     if n_clicks is None:
         return dash.no_update, fig_cluster, fig_shap
 
-    # Mock Decision Logic (Update with Role 3 XGBoost later)
-    risk_score = min(100,(age or 0) * 0.4 + (bmi or 0) * 1.6 + (sbp or 0) * 0.05 + (dbp or 0) * 0.05 + (glucose or 0) * 0.1 + (hba1c or 0) * 5 + (chol or 0) * 0.02 +
+    risk_score = min(100,(age or 0) * 0.4 + (bmi or 0) * 1.6 + (sbp or 0) * 0.05 + (dbp or 0) * 0.05 +
+                     (glucose or 0) * 0.1 + (hba1c or 0) * 5 + (chol or 0) * 0.02 +
                      (trig or 0) * 0.02 - (sleep or 0) * 0.5 - (act or 0) * 0.05)
     level = "ELEVATED" if risk_score > 65 else "MODERATE" if risk_score > 40 else "STABLE"
     res_color = COLORS["danger"] if level == "ELEVATED" else COLORS["warning"] if level == "MODERATE" else COLORS["primary"]
 
     result_content = html.Div([
         dbc.Row([
-            dbc.Col(info_card("Risk Level", level,
-                    "Clinical Classification", res_color)),
-            dbc.Col(info_card("Model Confidence",
-                    f"{int(risk_score)}%", "Risk Probability", "#264653")),
-            dbc.Col(info_card("Lifestyle Segment", "Segment B",
-                    "Patient Grouping", COLORS["secondary"])),
+            dbc.Col(info_card("Risk Level", level, "Clinical Classification", res_color)),
+            dbc.Col(info_card("Model Confidence", f"{int(risk_score)}%", "Risk Probability", "#264653")),
+            dbc.Col(info_card("Lifestyle Segment", "Segment B", "Patient Grouping", COLORS["secondary"])),
         ]),
         dbc.Alert([
-            html.H5("Intervention Recommended",
-                    className="alert-heading fw-bold"),
-            html.P(
-                f"Patient falls within the {level.lower()} risk bracket. Recommended actions include metabolic testing and lifestyle counseling.")
+            html.H5("Intervention Recommended", className="alert-heading fw-bold"),
+            html.P(f"Patient falls within the {level.lower()} risk bracket. Recommended actions include metabolic testing and lifestyle counseling.")
         ], color="light", className="border-start border-primary border-4 shadow-sm mt-3")
     ])
 
-    return result_content, fig_cluster, fig_shap
+    # 3. Recommendations Section
+    if recs_df is not None and not recs_df.empty:
+        cluster_recs = recs_df[recs_df["cluster_name"].str.contains(level, case=False)]
+        rec_cards = [
+            dbc.Alert(r, color="light", className="border-start border-primary border-4 shadow-sm mt-2")
+            for r in cluster_recs["recommendation"].head(3)
+        ]
+        result_content.children.append(html.Div([
+            html.H5("Actionable Recommendations", className="fw-bold text-secondary mt-4"),
+            html.Div(rec_cards)
+        ]))
 
+    return result_content, fig_cluster, fig_shap
 
 if __name__ == '__main__':
     app.run(debug=True)

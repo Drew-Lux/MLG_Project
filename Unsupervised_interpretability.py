@@ -24,10 +24,10 @@ import joblib
 # If the files do not exist yet, the SHAP-for-classification block is skipped
 # gracefully with a clear warning message.
  
-DATASET_PATH   = "data/Diabetes_and_Lifestyle_Dataset_Dummy.csv" #Remove Dummy when we have the real dataset
+DATASET_PATH = os.path.join("data_insight", "Diabetes_scaled_for_modeling.csv")
 OUTPUT_DIR     = "outputs/clustering"
-MODELS_DIR     = "outputs/models"           # where Role 2 saves .pkl files
-BEST_MODEL_KEY = "xgboost_model.pkl"        # change to rf_model.pkl if preferred
+MODELS_DIR     = "outputs/models"           
+BEST_MODEL_KEY = "xgboost_model.pkl"        
  
 os.makedirs(OUTPUT_DIR, exist_ok=True)
  
@@ -302,24 +302,35 @@ else:
     plt.tight_layout()
     save_fig(fig, "shap_classification_bar.png")
  
-    # ── Beeswarm / Summary plot ───────────────────────────────────────────────
-    fig = plt.figure(figsize=(10, 6))
-    if isinstance(shap_vals, list):
-        # For multi-class, show class with highest avg |shap|
-        best_class = int(np.argmax([np.abs(s).mean() for s in shap_vals]))
-        shap.summary_plot(shap_vals[best_class], X_sample,
-                          feature_names=feature_cols, show=False,
-                          plot_type="dot", max_display=15)
-        plt.title(f"SHAP Summary — Class: {le_target.classes_[best_class]}", fontweight="bold")
-    else:
-        shap.summary_plot(shap_vals, X_sample,
-                          feature_names=feature_cols, show=False,
-                          plot_type="dot", max_display=15)
-        plt.title("SHAP Summary — Risk Classification", fontweight="bold")
+    # Beeswarm / Summary plot
+fig = plt.figure(figsize=(10, 6))
+
+if isinstance(shap_vals, list):
+    # For multi-class, pick the class with highest avg |shap|
+    best_class = int(np.argmax([np.abs(s).mean() for s in shap_vals]))
+    shap.summary_plot(
+        shap_vals[best_class],
+        X_sample,
+        feature_names=feature_cols,
+        show=False,
+        plot_type="dot",
+        max_display=15
+    )
+    plt.title(f"SHAP Summary - Class: {le_target.classes_[best_class]}", fontweight="bold")
+
+else:
+    shap.summary_plot(
+        shap_vals,
+        X_sample,
+        feature_names=feature_cols,
+        show=False,
+        plot_type="dot",
+        max_display=15
+    )
+    plt.title("SHAP Summary - Risk Classification", fontweight="bold")
     plt.tight_layout()
     save_fig(fig, "shap_classification_beeswarm.png")
- 
- 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6 — SHAP FOR CLUSTER INTERPRETATION
 # ─────────────────────────────────────────────────────────────────────────────
