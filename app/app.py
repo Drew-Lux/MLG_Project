@@ -57,7 +57,6 @@ def info_card(title, value, subtitle, color):
         ])
     ], className="shadow-sm border-0 mb-3")
 
-
 # ─── APP START ───────────────────────────────────────────────────────────────
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
@@ -101,8 +100,23 @@ app.layout = dbc.Container([
                             dcc.Slider(1, 10, 1, value=5, id="input-diet",
                                        marks={1: 'Poor', 5: 'Avg', 10: 'Great'}),
 
+                            html.Label(
+                                "Systolic Blood Pressure (mmHg)", className="fw-bold"),
+                            dbc.Input(id="input-sbp", type="number",
+                                      placeholder="e.g. 120", className="mb-3"),
+
+                            html.Label(
+                                "Diastolic Blood Pressure (mmHg)", className="fw-bold"),
+                            dbc.Input(id="input-dbp", type="number",
+                                      placeholder="e.g. 80", className="mb-3"),
+
+                            html.Label(
+                                "Sleep Hours per Day", className="fw-bold"),
+                            dbc.Input(id="input-sleep", type="number",
+                                      placeholder="e.g. 7", className="mb-3"),
+
                             dbc.Button("GENERATE DIAGNOSTIC", id="predict-btn",
-                                       color="primary", className="mt-4 w-100 fw-bold shadow-sm")
+                            color="primary", className="mt-4 w-100 fw-bold shadow-sm")
                         ])
                     ], className="border-0 shadow-sm p-2")
                 ], width=4),
@@ -155,11 +169,16 @@ app.layout = dbc.Container([
      Output("cluster-graph", "figure"),
      Output("shap-graph", "figure")],
     Input("predict-btn", "n_clicks"),
-    [State("input-age", "value"), State("input-bmi",
-                                        "value"), State("input-act", "value")],
+    [State("input-age", "value"),
+     State("input-bmi", "value"),
+     State("input-act", "value"),
+    State("input-diet", "value"),
+    State("input-sbp", "value"),
+    State("input-dbp", "value"),
+    State("input-sleep", "value")],
     prevent_initial_call=False
 )
-def update_dashboard(n_clicks, age, bmi, act):
+def update_dashboard(n_clicks, age, bmi, act, diet, sbp, dbp, sleep):
     # Default Visuals
     fig_cluster = go.Figure().update_layout(
         title="Awaiting Model Assets...", template="plotly_white")
@@ -188,8 +207,13 @@ def update_dashboard(n_clicks, age, bmi, act):
         # Highlight User
         if age and bmi:
             patient_row = pd.DataFrame([{col: 0 for col in scaler_features}])
-            patient_row['Age'] = age
+            patient_row['age'] = age
             patient_row['bmi'] = bmi
+            patient_row['physical_activity_minutes_per_week'] = act or 0
+            patient_row['diet_score'] = diet or 5
+            patient_row['systolic_bp'] = sbp or 120
+            patient_row['diastolic_bp'] = dbp or 80
+            patient_row['sleep_hours_per_day'] = sleep or 7
             p_scaled = km_bundle["scaler"].transform(
                 patient_row.reindex(columns=scaler_features, fill_value=0))
             p_pca = pca.transform(p_scaled)
@@ -207,7 +231,7 @@ def update_dashboard(n_clicks, age, bmi, act):
         return dash.no_update, fig_cluster, fig_shap
 
     # Mock Decision Logic (Update with Role 3 XGBoost later)
-    risk_score = min(100, (age or 0) * 0.4 + (bmi or 0) * 1.6)
+    risk_score = min(100,(age or 0) * 0.4 + (bmi or 0) * 1.6 + (sbp or 0) * 0.05 + (dbp or 0) * 0.05 + (sleep or 0) * -0.5)
     level = "ELEVATED" if risk_score > 65 else "MODERATE" if risk_score > 40 else "STABLE"
     res_color = COLORS["danger"] if level == "ELEVATED" else COLORS["warning"] if level == "MODERATE" else COLORS["primary"]
 
@@ -232,4 +256,4 @@ def update_dashboard(n_clicks, age, bmi, act):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)
