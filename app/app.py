@@ -87,137 +87,168 @@ app.layout = dbc.Container([
         # TAB 1: Patient Assessment
         dbc.Tab(label="PATIENT ASSESSMENT", children=[
             dbc.Row([
-                dbc.Col([
-                    html.H5("Clinical Entry",
-                            className="mt-4 fw-bold text-secondary"),
-                    dbc.Card([
-                        dbc.CardBody([
-                            # Age
-                            dbc.Row([
-                                dbc.Col(html.Label("Age", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-age", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-age", type="number", placeholder="Enter Age", className="mb-3"),
-                            dbc.Tooltip("Age is a key risk factor. No tools needed — just your date of birth.", target="info-age", placement="right"),
+    # Left column: grouped input cards
+    dbc.Col([
+        html.H5("Clinical Entry", className="mt-4 fw-bold text-secondary"),
 
-                            # BMI
-                            dbc.Row([
-                                dbc.Col(html.Label("BMI (Body Mass Index)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-bmi", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-bmi", type="number", placeholder="e.g. 28.5", className="mb-3"),
-                            dbc.Tooltip("BMI measures body fat based on height and weight. BMI = weight (kg) ÷ height (m²). Use a scale and tape measure, or ask at a clinic.", target="info-bmi", placement="right"),
+        # Demographics
+        dbc.Card([
+            dbc.CardHeader("Demographics"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col(html.Label("Age", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-age", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-age", type="number", placeholder="Enter Age", className="mb-3"),
+                dbc.Tooltip("Age is a key risk factor. No tools needed — just your date of birth.", target="info-age", placement="right"),
+            ])
+        ], className="mb-3"),
 
-                            # Physical Activity
-                            dbc.Row([
-                                dbc.Col(html.Label("Physical Activity (Minutes/Week)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-act", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-act", type="number", placeholder="e.g. 150", className="mb-3"),
-                            dbc.Tooltip("Weekly minutes of moderate exercise. ≥150 minutes is recommended.", target="info-act", placement="right"),
+        # Vitals
+        dbc.Card([
+            dbc.CardHeader("Vitals"),
+            dbc.CardBody([
+                # BMI
+                dbc.Row([
+                    dbc.Col(html.Label("BMI (Body Mass Index)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-bmi", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-bmi", type="number", placeholder="e.g. 28.5", className="mb-3"),
+                dbc.Tooltip("BMI measures body fat based on height and weight.", target="info-bmi", placement="right"),
 
-                            # Diet Quality
-                            dbc.Row([
-                                dbc.Col(html.Label("Diet Quality Score (1–10)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-diet", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dcc.Slider(1, 10, 1, value=5, id="input-diet", marks={1: 'Poor', 5: 'Avg', 10: 'Great'}),
-                            dbc.Tooltip("Self‑rated diet quality. Higher scores indicate healthier eating habits.", target="info-diet", placement="right"),
+                # Systolic BP
+                dbc.Row([
+                    dbc.Col(html.Label("Systolic Blood Pressure (mmHg)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-sbp", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-sbp", type="number", placeholder="e.g. 120", className="mb-3"),
+                dbc.Tooltip("Systolic BP is the pressure when the heart beats. Normal is 90–120 mmHg.", target="info-sbp", placement="right"),
 
-                            # Systolic BP
-                            dbc.Row([
-                                dbc.Col(html.Label("Systolic Blood Pressure (mmHg)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-sbp", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-sbp", type="number", placeholder="e.g. 120", className="mb-3"),
-                            dbc.Tooltip("Systolic BP is the pressure when the heart beats. Normal is 90 - 120 mmHg.", target="info-sbp", placement="right"),
+                # Diastolic BP
+                dbc.Row([
+                    dbc.Col(html.Label("Diastolic Blood Pressure (mmHg)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-dbp", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-dbp", type="number", placeholder="e.g. 80", className="mb-3"),
+                dbc.Tooltip("Diastolic BP is the pressure when the heart rests between beats. Normal is 60–80 mmHg.", target="info-dbp", placement="right"),
 
-                            # Diastolic BP
-                            dbc.Row([
-                                dbc.Col(html.Label("Diastolic Blood Pressure (mmHg)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-dbp", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-dbp", type="number", placeholder="e.g. 80", className="mb-3"),
-                            dbc.Tooltip("Diastolic BP is the pressure when the heart rests between beats. Normal is  60 - 80 mmHg.", target="info-dbp", placement="right"),
+                # Heart Rate
+                dbc.Row([
+                    dbc.Col(html.Label("Heart Rate (beats/min)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-hr", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-hr", type="number", placeholder="e.g. 72", className="mb-3"),
+                dbc.Tooltip("Normal resting heart rate: 60–100 bpm.", target="info-hr", placement="right"),
+            ])
+        ], className="mb-3"),
 
-                            # Glucose
-                            dbc.Row([
-                                dbc.Col(html.Label("Fasting Glucose (mg/dL)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-glucose", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-glucose", type="number", placeholder="e.g. 95", className="mb-3"),
-                            dbc.Tooltip("Fasting glucose normal range: 70–99 mg/dL. Requires glucometer or lab test.", target="info-glucose", placement="right"),
+        # Lab Results
+        dbc.Card([
+            dbc.CardHeader("Lab Results"),
+            dbc.CardBody([
+                # Glucose
+                dbc.Row([
+                    dbc.Col(html.Label("Fasting Glucose (mg/dL)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-glucose", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-glucose", type="number", placeholder="e.g. 95", className="mb-3"),
+                dbc.Tooltip("Fasting glucose normal range: 70–99 mg/dL.", target="info-glucose", placement="right"),
 
-                            # HbA1c
-                            dbc.Row([
-                                dbc.Col(html.Label("HbA1c (%)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-hba1c", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-hba1c", type="number", placeholder="e.g. 5.6", className="mb-3"),
-                            dbc.Tooltip("HbA1c reflects 2–3 month average glucose. Normal <5.7%, prediabetes 5.7–6.4%, diabetes ≥6.5%.", target="info-hba1c", placement="right"),
+                # HbA1c
+                dbc.Row([
+                    dbc.Col(html.Label("HbA1c (%)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-hba1c", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-hba1c", type="number", placeholder="e.g. 5.6", className="mb-3"),
+                dbc.Tooltip("HbA1c reflects 2–3 month average glucose.", target="info-hba1c", placement="right"),
 
-                            # Total Cholesterol
-                            dbc.Row([
-                                dbc.Col(html.Label("Total Cholesterol (mg/dL)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-chol", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-chol", type="number", placeholder="e.g. 180", className="mb-3"),
-                            dbc.Tooltip("Normal total cholesterol <200 mg/dL. Requires blood test.", target="info-chol", placement="right"),
+                # Cholesterol
+                dbc.Row([
+                    dbc.Col(html.Label("Total Cholesterol (mg/dL)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-chol", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-chol", type="number", placeholder="e.g. 180", className="mb-3"),
+                dbc.Tooltip("Normal total cholesterol <200 mg/dL.", target="info-chol", placement="right"),
 
-                            #Triglycerides
-                            dbc.Row([
-                                dbc.Col(html.Label("Triglycerides (mg/dL)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-trig", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-trig", type="number", placeholder="e.g. 140", className="mb-3"),
-                            dbc.Tooltip("Normal triglycerides <150 mg/dL. Requires blood test.", target="info-trig", placement="right"),
+                # Triglycerides
+                dbc.Row([
+                    dbc.Col(html.Label("Triglycerides (mg/dL)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-trig", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-trig", type="number", placeholder="e.g. 140", className="mb-3"),
+                dbc.Tooltip("Normal triglycerides <150 mg/dL.", target="info-trig", placement="right"),
+            ])
+        ], className="mb-3"),
 
-                            # Heart Rate
-                            dbc.Row([
-                                dbc.Col(html.Label("Heart Rate (beats/min)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-hr", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-hr", type="number", placeholder="e.g. 72", className="mb-3"),
-                            dbc.Tooltip("Normal resting heart rate: 60–100 bpm. Measure pulse or use smartwatch.", target="info-hr", placement="right"),
+        # Lifestyle
+        dbc.Card([
+            dbc.CardHeader("Lifestyle"),
+            dbc.CardBody([
+                # Activity
+                dbc.Row([
+                    dbc.Col(html.Label("Physical Activity (Minutes/Week)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-act", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-act", type="number", placeholder="e.g. 150", className="mb-3"),
+                dbc.Tooltip("Weekly minutes of moderate exercise. ≥150 minutes is recommended.", target="info-act", placement="right"),
 
-                            # Sleep Hours
-                            dbc.Row([
-                                dbc.Col(html.Label("Sleep Hours per Day", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-sleep", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dbc.Input(id="input-sleep", type="number", placeholder="e.g. 7", className="mb-3"),
-                            dbc.Tooltip("Average nightly sleep duration. Adults typically need 7–9 hours.", target="info-sleep", placement="right"),
+                # Diet
+                dbc.Row([
+                    dbc.Col(html.Label("Diet Quality Score (1–10)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-diet", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dcc.Slider(1, 10, 1, value=5, id="input-diet", marks={1: 'Poor', 5: 'Avg', 10: 'Great'}),
+                dbc.Tooltip("Self‑rated diet quality. Higher scores indicate healthier eating habits.", target="info-diet", placement="right"),
 
-                            # Stress
-                            dbc.Row([
-                                dbc.Col(html.Label("Stress Score (1–10)", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-stress", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dcc.Slider(1, 10, 1, value=5, id="input-stress", marks={1: 'Low', 5: 'Moderate', 10: 'High'}),
-                            dbc.Tooltip("Self-rated stress. 1–3 low, 4–6 moderate, 7–10 high.", target="info-stress", placement="right"),
+                # Sleep
+                dbc.Row([
+                    dbc.Col(html.Label("Sleep Hours per Day", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-sleep", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dbc.Input(id="input-sleep", type="number", placeholder="e.g. 7", className="mb-3"),
+                dbc.Tooltip("Average nightly sleep duration. Adults typically need 7–9 hours.", target="info-sleep", placement="right"),
 
-                            # Smoking
-                            dbc.Row([
-                                dbc.Col(html.Label("Smoking Status", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-smoking", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dcc.Dropdown(id="input-smoking", options=[{"label": "Non-Smoker", "value": 0}, {"label": "Smoker", "value": 1}], placeholder="Select status", className="mb-3"),
-                            dbc.Tooltip("Smoking increases cardiovascular and diabetes risk. Select your current status.", target="info-smoking", placement="right"),
+                # Stress
+                dbc.Row([
+                    dbc.Col(html.Label("Stress Score (1–10)", className="fw-bold"), width="auto"),
+                    dbc.Col(html.Span("🛈", id="info-stress", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+                ]),
+                dcc.Slider(1, 10, 1, value=5, id="input-stress", marks={1: 'Low', 5: 'Moderate', 10: 'High'}),
+                dbc.Tooltip("Self-rated stress. 1–3 low, 4–6 moderate, 7–10 high.", target="info-stress", placement="right"),
 
-                            # Alcohol
-                            dbc.Row([
-                                dbc.Col(html.Label("Alcohol Use", className="fw-bold"), width="auto"),
-                                dbc.Col(html.Span("🛈", id="info-alcohol", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
-                            ]),
-                            dcc.Dropdown(id="input-alcohol", options=[{"label": "No", "value": 0}, {"label": "Yes", "value": 1}], placeholder="Select", className="mb-3"),
-                            dbc.Tooltip("Alcohol use affects metabolic health. Select if you currently drink.", target="info-alcohol", placement="right"),
-                           
-                            #Generate Button
-                            dbc.Button("GENERATE DIAGNOSTIC", id="predict-btn",
-                            color="primary", className="mt-4 w-100 fw-bold shadow-sm")
-                        ])
-                    ], className="border-0 shadow-sm p-2")
-                ], width=4),
+                 # Smoking
+            dbc.Row([
+                dbc.Col(html.Label("Smoking Status", className="fw-bold"), width="auto"),
+                dbc.Col(html.Span("🛈", id="info-smoking", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+            ]),
+            dcc.Dropdown(id="input-smoking", options=[{"label": "Non-Smoker", "value": 0}, {"label": "Smoker", "value": 1}], placeholder="Select status", className="mb-3"),
+            dbc.Tooltip("Smoking increases cardiovascular and diabetes risk. Select your current status.", 
+                        target="info-smoking", placement="right"),
+
+            # Alcohol
+            dbc.Row([
+                dbc.Col(html.Label("Alcohol Use", className="fw-bold"), width="auto"),
+                dbc.Col(html.Span("🛈", id="info-alcohol", style={"cursor": "pointer", "color": "#2A9D8F"}), width="auto")
+            ]),
+            dcc.Dropdown(
+                id="input-alcohol",
+                options=[{"label": "No", "value": 0}, {"label": "Yes", "value": 1}],
+                placeholder="Select",
+                className="mb-3"
+            ),
+            dbc.Tooltip("Alcohol use affects metabolic health. Select if you currently consume alcohol.", 
+                        target="info-alcohol", placement="right"),
+        ])
+    ], className="mb-3"),
+
+    # Generate Button
+    dbc.Button(
+        "GENERATE DIAGNOSTIC",
+        id="predict-btn",
+        color="primary",
+        className="mt-4 w-100 fw-bold shadow-sm"
+    )
+], width=4),
 
                 dbc.Col([
                     html.H5("Diagnostic Intelligence Profile",
