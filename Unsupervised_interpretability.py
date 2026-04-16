@@ -28,7 +28,7 @@ import joblib
 DATASET_PATH = os.path.join("data_insight", "Diabetes_scaled_for_modeling.csv")
 OUTPUT_DIR     = "outputs/clustering"
 MODELS_DIR     = "outputs/models"           
-BEST_MODEL_KEY = "xgboost_model.pkl"        
+BEST_MODEL_KEY = "random_forest_model.pkl"        
  
 os.makedirs(OUTPUT_DIR, exist_ok=True)
  
