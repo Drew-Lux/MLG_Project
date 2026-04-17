@@ -165,7 +165,7 @@ for filename, model in models.items():
 metrics_df = pd.DataFrame(metrics_results)
 metrics_df["rank"] = metrics_df["accuracy"].rank(ascending=False)
 
-csv_path = os.path.join(METRICS_DIR, "model_metrics.csv")
+csv_path = os.path.join(METRICS_DIR, "model_comparison.csv")
 metrics_df.to_csv(csv_path, index=False)
 
 print(f"\n Metrics saved → {csv_path}")
